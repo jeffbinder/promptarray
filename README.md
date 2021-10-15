@@ -40,7 +40,7 @@ This has the opposite effect compared to the above, placing a heightened emphasi
 
 If you want to include any of the special characters in the prompt, you can escape them with `\`. The system allows operations to be combined arbitrarily, producing complex expressions like the following:
 
-> {~Content warning: violence. }The following is a {true|faithful} \& vivid account of what happened to me when I was abducted by {aliens&government agents&{foreign|Russian} spies}.
+> {~Content warning: violence. }The following is a {true|faithful} \\& vivid account of what happened to me when I was abducted by {aliens&government agents&{foreign|Russian} spies}.
 
 Below I present some preliminary findings suggesting that this system can improve the performance of language models at certain tasks—by one benchmark, LAMBADA, even bringing relatively small models like the 774B parameter GPT2 close to the reported performance of the massive GPT3. It also gives the user new ways of controlling the output of text generators, opening the potential for more systematic, nuanced, and creative approaches to what is, at present, often a matter of trial and error.
 
