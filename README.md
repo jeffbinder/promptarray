@@ -42,7 +42,7 @@ If you want to include any of the special characters in the prompt, you can esca
 
 > {~Content warning: violence. }The following is a {true|faithful} \\& vivid account of what happened to me when I was abducted by {aliens&government agents&{foreign|Russian} spies}.
 
-Below I present some preliminary findings suggesting that this system can improve the performance of language models at certain tasks—by one benchmark, LAMBADA, even bringing relatively small models like the 774B parameter GPT2 close to the reported performance of the massive GPT3. It also gives the user new ways of controlling the output of text generators, opening the potential for more systematic, nuanced, and creative approaches to what is, at present, often a matter of trial and error.
+Below I present some preliminary findings suggesting that this system can improve the performance of language models at certain tasks—by one benchmark, LAMBADA, even bringing relatively small models like the 774B parameter GPT-2 close to the reported performance of the massive GPT-3. It also gives the user new ways of controlling the output of text generators, opening the potential for more systematic, nuanced, and creative approaches to what is, at present, often a matter of trial and error.
 
 ## What It Does (and Why, and How)
 
@@ -115,7 +115,7 @@ One might think to do this simply by altering the wording of the prompt so as to
 
 As an experiment, I ran GPT-2 XL a thousand times with each of these prompts and counted how many of the outputs contained one of three words associated with legs. Here are the results, including p-values computed using Barnard's exact test. As the results show, this method does not have the expected effect.
 
-| Words | Prompt A | Prompt B | p A\<C |
+| Words | Prompt A | Prompt B | p A\<B |
 | --- | --- | --- | --- |
 | leg/legs/legged | 101/1000 | 646/1000 | ~9e-149 |
 
@@ -141,11 +141,11 @@ As the results show, the method does not work perfectly—it only reduces the re
 
 This technique is not the only way the *not* operator may be applied. Another approach is to utilize both sides of the operator, indicating both what the animal is and what it is not. This technique can be used to discourage those irksome references to hair and fur:
 
-> Prompt B. Scientists recently discovered a new species of {snake~mammal}. Here is a description of it:
+> Prompt D. Scientists recently discovered a new species of {snake~mammal}. Here is a description of it:
 
 These are the results:
 
-| Words | Prompt A | Prompt B | p A\>B |
+| Words | Prompt A | Prompt D | p A\>D |
 | --- | --- | --- | --- |
 | fur/furred/furry | 19/1000 | 4/1000 | ~0.0008 |
 | hair/hairs/haired/hairy | 61/1000 | 36/1000 | ~0.005 |
