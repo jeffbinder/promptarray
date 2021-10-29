@@ -23,11 +23,12 @@ repetition_penalty = None
 suppress_punctuation = True
 batch_size = 20
 
-prompting_mode = 'sentence' # One of 'default', 'blank', 'fixed', 'word', 'phrase', 'sentence', 'sentence|word', 'sentence|phrase', 'sentence|word|phrase'
+prompting_mode = 'sentence' # One of 'default', 'blank', 'fixed', 'word', 'phrase', 'sentence', 'sentence|blank', 'sentence|word', 'sentence|phrase', 'sentence|word|phrase'
 prefix = '[...]'
 fixed_negative_prompt = '[...] and'
 finetune_sentence_tokenizer = False
 regularize_text = False
+overlap_factor = 0.0
 
 re_phrase_boundary = re.compile('[,.:;?!"“”]')
 
@@ -115,6 +116,7 @@ fixed_negative_prompt = model.escape_prompt(fixed_negative_prompt)
 def run_model(prompt):
     output = model.generate(
         prompt=prompt,
+        overlap_factor=overlap_factor,
         tokenizer=tokenizer,
         pad_token_id=0,
         max_length=1,
@@ -136,6 +138,7 @@ def run_model(prompt):
         prompt_2 = '{' + prompt + '}' + tok_1
         output_2 = model.generate(
             prompt=prompt_2,
+            overlap_factor=overlap_factor,
             tokenizer=tokenizer,
             pad_token_id=0,
             max_length=5,
@@ -219,9 +222,14 @@ def interpret_line(line):
         prompt = f'{prompt}~{prefix}{last_phrase}'
     
     elif prompting_mode == 'sentence':
-        _, last_sentence = split_last_sentence(prompt)
+        first_sentences, last_sentence = split_last_sentence(prompt)
         last_sentence = model.escape_prompt(last_sentence)
         prompt = f'{prompt}~{prefix}{last_sentence}'
+    
+    elif prompting_mode == 'sentence|blank':
+        first_sentences, last_sentence = split_last_sentence(prompt)
+        last_sentence = model.escape_prompt(last_sentence)
+        prompt = f'{prompt}~{prefix}{{{last_sentence}|}}'
 
     elif prompting_mode == 'sentence|word':
         _, last_sentence = split_last_sentence(prompt)

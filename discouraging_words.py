@@ -19,12 +19,12 @@ top_p = 0.5
 repetition_penalty = 1.5
 num_return_sequences = 10
 num_batches = 100
-seed = 2637944076051350679
+seed = 14891435220765460437
 
-experiment_name = "snake-legs"
+experiment_name = "snake~legs"
 prompt_v1 = '''Scientists recently discovered a new species of snake. Here is a description of it:'''
 prompt_v2 = '''Scientists recently discovered a new species of snake{~ with legs}. Here is a description of it:'''
-words_to_count = [("leg", "legs", "legged")]
+words_to_count = [("leg", "legs", "legged"), ("fur", "furred", "furry"), ("hair", "hairs", "haired", "hairy")]
 barnard_test_alternative = "greater"
 
 f1 = codecs.open(f"discouraging-results/{experiment_name}-v1", "w", "utf8")
@@ -59,6 +59,7 @@ for batch_num in range(num_batches):
             do_sample=do_sample,
             num_return_sequences=num_return_sequences,
             pad_token_id = 0,
+            verbose=True,
         )
 
         # Remove the batch dimension when returning multiple sequences

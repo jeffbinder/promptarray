@@ -63,6 +63,7 @@ class ExtendedGenerationMixin(GenerationMixin):
     def generate(
         self,
         prompt: Optional[str] = None,
+        overlap_factor: Optional[float] = 0.25,
         tokenizer: Optional[Any] = None,
         max_length: Optional[int] = None,
         min_length: Optional[int] = None,
@@ -109,6 +110,8 @@ class ExtendedGenerationMixin(GenerationMixin):
             prompt (:obj:`str`, `optional`):
                 A boolean expression used as a prompt for the generation. If :obj:`None` the method initializes it with
                 an empty expression.
+            overlap_factor (:obj:`float`, `optional`, defaults to 0.25):
+                A value indicating how much overlap is removed when computing the *or* and *not* operators. Must be in range [0, 1].
             tokenizer (:obj:`transformers.PreTrainedTokenizer1):
                 Tokenizer used in processing the prompt.
             max_length (:obj:`int`, `optional`, defaults to :obj:`model.config.max_length`):
@@ -246,7 +249,8 @@ class ExtendedGenerationMixin(GenerationMixin):
             program = Program()
         else:
             program, input_ids, attention_mask = Program.compile(
-                prompt, tokenizer, pad_token_id, bos_token_id, verbose
+                prompt, tokenizer, pad_token_id, bos_token_id,
+                self.config.vocab_size, overlap_factor, verbose
             )
             input_ids = input_ids.to(self.device)
             model_kwargs["attention_mask"] = attention_mask.to(self.device)
@@ -518,6 +522,7 @@ class ExtendedGenerationMixin(GenerationMixin):
                 continue  # don't waste resources running the code we don't need
 
             next_token_logits = outputs.logits[:, -1, :]
+            next_token_logits = nn.functional.softmax(next_token_logits, dim=-1)
             
             # perform the program
             next_token_logits = program(next_token_logits, 1)
@@ -770,6 +775,7 @@ class ExtendedGenerationMixin(GenerationMixin):
                 continue  # don't waste resources running the code we don't need
 
             next_token_logits = outputs.logits[:, -1, :]
+            next_token_logits = nn.functional.softmax(next_token_logits, dim=-1)
             
             # perform the program
             next_token_logits = program(next_token_logits, num_return_sequences)

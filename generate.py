@@ -7,15 +7,16 @@ model_type = 'gpt2'
 model_name_or_path = 'gpt2-xl'
 device = 'cuda'
 
-length = 300
+length = 100
 do_sample = True
 temperature = 0.6
-k = 10
+k = 5
 p = 0.5
 repetition_penalty = 1.5
-num_return_sequences = 1
+num_return_sequences = 10
+overlap_factor = 0.25
 
-prompt_text = '''Scientists recently discovered a new species of rabbit{~ in the United States}. Here is a description of it:'''
+prompt_text = '''Scientists recently discovered a new species of {serpent~snake}. Here is a description of it:'''
 
 
 # Initialize the model and tokenizer
@@ -33,6 +34,7 @@ import time
 start_time = time.time()
 output_sequences = model.generate(
     prompt=prompt_text,
+    overlap_factor=overlap_factor,
     tokenizer=tokenizer,
     max_length=length,
     temperature=temperature,
@@ -41,7 +43,7 @@ output_sequences = model.generate(
     repetition_penalty=repetition_penalty,
     do_sample=do_sample,
     num_return_sequences=num_return_sequences,
-    pad_token_id = 0,
+    pad_token_id=0,
     verbose=True,
 )
 print(f"Time: {time.time() - start_time}s")
