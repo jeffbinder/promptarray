@@ -4,7 +4,7 @@ Neural text generators like the [GPT](https://github.com/openai/gpt-2) models pr
 
 Designing reliable prompts, however, is a complex matter. The emergence of text generators has led to the practice of [prompt engineering](https://arxiv.org/abs/2107.13586)—that is, techniques (some automated, some manual) for designing better language model inputs. Some researchers have also developed new approaches to text generation that depart from the basic prompt-in, completion-out paradigm. One [proposed approach](https://arxiv.org/pdf/2103.00453.pdf) uses a secondary prompt to indicate forms of "bias" that are to be discouraged in the output. A related technique is [calibration](https://arxiv.org/pdf/2102.09690.pdf), which adjusts the probability distribution based on the output given a generic input.
 
-This repo implements the rudiments of what I am hoping will become a broader set of techniques for controlling text generators. Rather than entering a single text prompt that is fed directly into the model, one enters an expression that can incorporate the following operators:
+This repo implements the rudiments of what I am hoping will become a broader set of techniques for controlling text generators. as opposed to entering a single text prompt that is fed directly into the model, one enters an expression that can incorporate the following operators:
 
 | Operator | Meaning |
 | --- | --- |
@@ -12,7 +12,7 @@ This repo implements the rudiments of what I am hoping will become a broader set
 | A\|B | A or B |
 | A^B | A and not B |
 | A/B | A more than B |
-| A~B | A rather than B |
+| A~B | A as opposed to B |
 
 In essence, this creates hybrid of a text generator and a programming language, making it easy to compose arrays of multiple prompt variants and experiment with new ways of manipulating the numerical outputs of language models. The primary downside is an increase in the use of GPU memory.
 
@@ -50,7 +50,7 @@ This prompt tends to produce output that is not especially specific to any anima
 
 > The new species is a new genus and species, named Pteropus vampyrus. It was discovered in the forests of the Sierra Nevada Mountains in California. The new genus and species name honors Dr. Robert Vamp, a noted ornithologist and curator of the Museum of Vertebrate Zoology at the University of Chicago. The new genus name honors Dr Robert V. Pteropus, who discovered this species in the Sierra Nevada mountains of California in the early 1960s.
 
-Perhaps the most powerful operator is the *rather than* operator (~), which can be used to discourage outputs that are produced by a certain input. (This is related to the Boolean *not*, although there is a technical difference that I discuss below.) For example, one might want to generate a description of a "serpent" while emphasizing that this is not merely a synonym for "snake":
+Perhaps the most powerful operator is the *as opposed to* operator (~), which can be used to discourage outputs that are produced by a certain input. (This is related to the Boolean *not*, although there is a technical difference that I discuss below.) For example, one might want to generate a description of a "serpent" while emphasizing that this is not merely a synonym for "snake":
 
 > Scientists recently discovered a new species of {serpent~snake}. Here is a description of it:
 
@@ -58,7 +58,7 @@ This generates words about a "serpent" while discouraging words that could also 
 
 > The Serpent of the Sea (Sphyrna leucophylla) is a serpent that lives on the ocean floor, and has a long, thin body with a long neck, and a small head with a small mouth. It can be distinguished from other serpent species by its long neck, the fact that it has two pairs of fins, the fact it does not swim, and by the presence in its mouth of a pair of large spines, which are used for grasping and killing prey.
 
-The *rather than* operator has a number of potential uses. One technique is to place an empty string on either side of the operator; this can be used to boost or diminish the effect of a particular piece of text on the model. For instance:
+The *as opposed to* operator has a number of potential uses. One technique is to place an empty string on either side of the operator; this can be used to boost or diminish the effect of a particular piece of text on the model. For instance:
 
 > Scientists recently discovered a new species of bison{~ in the United States}. Here is a description of it:
 
@@ -90,9 +90,9 @@ This system was inspired in part by my research for my forthcoming book on the h
 
 While Boolean logic in its modern form is based primarily on *and*, *or*, and *not*, Boole's original logic system included a fourth operator that has largely been forgotten. If *or* is like addition, *not* subtraction, and *and* multiplication, then this operator is equivalent to division. Division, in Boole's system, is the inverse of *and*: dividing "small and fluffy" by "fluffy" gives us "small." He described division as the operation “by which from the conception of a given class of things we ascend to the conception of some larger class from which the given class would be formed from the mental selection of those individuals which possess a given property” (*Selected Manuscripts in Logic and Its Philosophy*, 58). This idea did not hold up in philosophical logic because there is not necessarily a unique category that meets this definition.
 
-I hope to show that, even if it is problematic in logic, division does have a sensible meaning in regard to language models. Put simply, if subtraction works like "not prompt A," division works more like "a prompt that means not A." This is a highly useful effect, especially given the difficulties language models presently have dealing with negation, and it is the basis of the *more than* and *rather than* operators employed in this program.
+I hope to show that, even if it is problematic in logic, division does have a sensible meaning in regard to language models. Put simply, if subtraction works like "not prompt A," division works more like "a prompt that means not A." This is a highly useful effect, especially given the difficulties language models presently have dealing with negation, and it is the basis of the *more than* and *as opposed to* operators employed in this program.
 
-This project also takes inspiration from some old insights from linguistic anthropology. Structuralists such as [Claude Lévi-Strauss](https://press.uchicago.edu/ucp/books/book/chicago/R/bo3614777.html) maintained that language is based on difference: in order to understand what it means for something to be raw, we also must understand the meaning of "cooked." Yet it is not always self-evident which words are opposites. Perhaps it is clear that the opposite of day is night, but what is the opposite of a narrative? Is it, as [Lev Manovich once posited](http://mfj-online.org/journalPages/MFJ34/Manovich_Database_FrameSet.html), a database? A scientific analysis? A photograph? Silence? The *rather than* operator makes it possible to specify which opposite one has in mind, thus guiding the generator with more precision.
+This project also takes inspiration from some old insights from linguistic anthropology. Structuralists such as [Claude Lévi-Strauss](https://press.uchicago.edu/ucp/books/book/chicago/R/bo3614777.html) maintained that language is based on difference: in order to understand what it means for something to be raw, we also must understand the meaning of "cooked." Yet it is not always self-evident which words are opposites. Perhaps it is clear that the opposite of day is night, but what is the opposite of a narrative? Is it, as [Lev Manovich once posited](http://mfj-online.org/journalPages/MFJ34/Manovich_Database_FrameSet.html), a database? A scientific analysis? A photograph? Silence? The *as opposed to* operator makes it possible to specify which opposite one has in mind, thus guiding the generator with more precision.
 
 ### Syntax
 
@@ -118,7 +118,7 @@ Since there are alternatives at multiple points in the prompt, all possible comb
 > 5: Greetings. They welcome you to  
 > 6: Welcome to
 
-Note that the text to which the *rather than* operator applies—the word "They" as an opening for the second sentence—must still be considered as an option so that its effects can be discouraged. In order to combine the outputs, the software generates a simple program that indicates the order in which the operations must be performed:
+Note that the text to which the *as opposed to* operator applies—the word "They" as an opening for the second sentence—must still be considered as an option so that its effects can be discouraged. In order to combine the outputs, the software generates a simple program that indicates the order in which the operations must be performed:
 
 > 0: 0 |= 1  
 > 1: 2 |= 3  
@@ -212,7 +212,7 @@ There may also be some use in expressions of the form "A&{B/C}," which generates
 
 The main logic of this system, including the compiler and code for executing programs, appears in `program.py`. The file `generation_utils.py` amends the corresponding file from the Transformers package to invoke this system. The easiest way to get started is to run `generate.py`, whose source can be edited to change the settings. The system works in basically the same way as the regular Transformers generator, but instead of passing a sequence of token ids to `generate()`, you pass in a string containing the Boolean expression. To run this code, you will need to have recent Git master versions of PyTorch and Transformers installed.
 
-The code in this repo implements Boolean prompting for autoregressive text generators; it can be used with GPT, GPT2, XLNet, XLM, CTRL, and Transformer XL models, either with or without finetuning. The broader technique I describe is not, however, specific to this type of generator. In my project [A Hundred Visions and Revisions](https://github.com/jeffbinder/visions-and-revisions), first published in March 2020, I incorporated a technique similar to the *rather than* operator (there called "strong topic bias") into a non-autoregressive text rewriting procedure based on [BERT](https://github.com/google-research/bert)-style masked language models.
+The code in this repo implements Boolean prompting for autoregressive text generators; it can be used with GPT, GPT2, XLNet, XLM, CTRL, and Transformer XL models, either with or without finetuning. The broader technique I describe is not, however, specific to this type of generator. In my project [A Hundred Visions and Revisions](https://github.com/jeffbinder/visions-and-revisions), first published in March 2020, I incorporated a technique similar to the *as opposed to* operator (there called "strong topic bias") into a non-autoregressive text rewriting procedure based on [BERT](https://github.com/google-research/bert)-style masked language models.
 
 ## Experiments
 
@@ -246,7 +246,7 @@ With the added phrase "an animal without legs," the generator actually mentions 
 
 This is an instance of a [much-discussed](https://direct.mit.edu/tacl/article/doi/10.1162/tacl_a_00298/43535/What-BERT-Is-Not-Lessons-from-a-New-Suite-of) problem language models have in dealing with negation. The problem stems in part from the nature of the predictive task: ordinarily, one wouldn't mention that the animal lacked legs unless legs had some relevance. However, it also stems from a general limitation of GPT-2's ability to understand negative words such as "without."
 
-The *rather than* operator provides an alternative way of specifying negation that produces much better results:
+The *as opposed to* operator provides an alternative way of specifying negation that produces much better results:
 
 > Prompt C. Scientists recently discovered a new species of snake{~ with legs}. Here is a description of it:
 
@@ -258,7 +258,7 @@ The results are as follows:
 
 As the results show, the method does indeed significantly reduce the references to legs in the output.
 
-This technique is not the only way the *rather than* operator may be applied. Another approach is to utilize both sides of the operator, indicating both what the animal is and what it is not. This technique can be used to discourage those irksome references to hair and fur:
+This technique is not the only way the *as opposed to* operator may be applied. Another approach is to utilize both sides of the operator, indicating both what the animal is and what it is not. This technique can be used to discourage those irksome references to hair and fur:
 
 > Prompt D. Scientists recently discovered a new species of {snake~mammal}. Here is a description of it:
 
@@ -272,7 +272,7 @@ These are the results:
 
 As these results show, adding the operator to the prompt decreased the incidence of words referring to the mammalian traits of fur and (to a lesser extent) hair. It also results in a somewhat smaller quantity of legs.
 
-A potential application of the *rather than* operator would be in discouraging the model from generating text with offensive, violent, or otherwise undesirable qualities. As such, this method would be conceptually similar to the ["self-debiasing"](https://arxiv.org/pdf/2103.00453.pdf) method proposed by Schick, Udupa, and Schütze. I would caution, however, that the technique's ability to discourage offensive text is only as good as the model's ability to distinguish offensive from non-offensive, which is to say (at least in the case of GPT-2) not that great. Such efforts also run into political difficulties: people do not all agree on what is offensive, and it is a complex matter to determine exactly what stance on this issue has wound up embedded in the model. Thus, while putting something like "{~Content warning: racism. }" into a prompt might mitigate the problem to some extent, it should not be taken as a solution.
+A potential application of the *as opposed to* operator would be in discouraging the model from generating text with offensive, violent, or otherwise undesirable qualities. As such, this method would be conceptually similar to the ["self-debiasing"](https://arxiv.org/pdf/2103.00453.pdf) method proposed by Schick, Udupa, and Schütze. I would caution, however, that the technique's ability to discourage offensive text is only as good as the model's ability to distinguish offensive from non-offensive, which is to say (at least in the case of GPT-2) not that great. Such efforts also run into political difficulties: people do not all agree on what is offensive, and it is a complex matter to determine exactly what stance on this issue has wound up embedded in the model. Thus, while putting something like "{~Content warning: racism. }" into a prompt might mitigate the problem to some extent, it should not be taken as a solution.
 
 As a means of controlling text generators, this technique is probably not as effective as techniques like [GeDi](https://github.com/salesforce/GeDi), which uses a classification model to suppress undesired qualities. What is interesting about this use of Boolean prompting is that it enables users to describe what they want to discourage in natural language, which is interpreted using nothing but a pretrained model.
 
@@ -318,10 +318,10 @@ These are the results for whole-word prediction:
 
 You can replicate these results using the `lambada_score.py` script. Note that the use of the | operator only works when the overlap factor is set to 0.
 
-It is worth noting that the scores are only improved with the *rather than* operator, as implemented using division; the ^ operator based on subtraction does not work in this application.
+It is worth noting that the scores are only improved with the *as opposed to* operator, as implemented using division; the ^ operator based on subtraction does not work in this application.
 
 To some extent, these techniques work by exploiting the specific nature of the test dataset. LAMBADA was designed for testing a model's ability to find relevant information that occurs in previous sentences. By boosting the effects of the earlier parts of the prompt, the negation operator ensures that the model considers the prompt as a whole.
 
-From an AI perspective, this approach might be seen as a way of gaming the system. Rather than improving the model, the program is sifting through the output to find the predictions that best suit the nature of the LAMBADA test. Yet this sifting is only a problem if we insist that the machine be capable of both determining the nature of the task and performing it without human intervention. If we see language models not as [a foundation for general intelligence](https://arxiv.org/pdf/2108.07258.pdf), but rather as a practical means of performing computations, then designing prompt expressions that suit the task at hand is a useful technique. Boolean prompting is an alternative to AI purism, an approach that enables human and machine to work together.
+From an AI perspective, this approach might be seen as a way of gaming the system. as opposed to improving the model, the program is sifting through the output to find the predictions that best suit the nature of the LAMBADA test. Yet this sifting is only a problem if we insist that the machine be capable of both determining the nature of the task and performing it without human intervention. If we see language models not as [a foundation for general intelligence](https://arxiv.org/pdf/2108.07258.pdf), but rather as a practical means of performing computations, then designing prompt expressions that suit the task at hand is a useful technique. Boolean prompting is an alternative to AI purism, an approach that enables human and machine to work together.
 
-There is also reason to think that at least some of the improvement stems from something other than the specific nature of the task. For all model sizes except medium, simply adding a ~ operator to the end of the input improved the performance by more than five percentage points. This intervention makes no assumptions about the task at hand; it merely encodes the prior that the prompt contains some information that is relevant to the generative task. As an explanation of the increased performance, I would hypothesize that the model is conflating the overall frequency of a word with its probability in a particular context; the *rather than* operator induces the system to focus more on the context. This technique could potentially be applied to any number of tasks.
+There is also reason to think that at least some of the improvement stems from something other than the specific nature of the task. For all model sizes except medium, simply adding a ~ operator to the end of the input improved the performance by more than five percentage points. This intervention makes no assumptions about the task at hand; it merely encodes the prior that the prompt contains some information that is relevant to the generative task. As an explanation of the increased performance, I would hypothesize that the model is conflating the overall frequency of a word with its probability in a particular context; the *as opposed to* operator induces the system to focus more on the context. This technique could potentially be applied to any number of tasks.
