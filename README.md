@@ -9,7 +9,7 @@ This repo implements the rudiments of what I am hoping will become a broader set
 | Operator | Meaning |
 | --- | --- |
 | A&B | A and B |
-| A|B | A or B |
+| A\|B | A or B |
 | A^B | A and not B |
 | A/B | A more than B |
 | A~B | A rather than B |
