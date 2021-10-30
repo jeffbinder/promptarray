@@ -43,6 +43,21 @@ from transformers.utils import logging
 from transformers.generation_utils import *
 from program import Program
 
+from transformers import (
+    CTRLLMHeadModel,
+    CTRLTokenizer,
+    GPT2LMHeadModel,
+    GPT2Tokenizer,
+    OpenAIGPTLMHeadModel,
+    OpenAIGPTTokenizer,
+    TransfoXLLMHeadModel,
+    TransfoXLTokenizer,
+    XLMTokenizer,
+    XLMWithLMHeadModel,
+    XLNetLMHeadModel,
+    XLNetTokenizer,
+)
+
 
 logger = logging.get_logger(__name__)
 
@@ -853,3 +868,26 @@ class ExtendedGenerationMixin(GenerationMixin):
                 )
         else:
             return input_ids
+
+
+class ExtendedGPT2LMHeadModel(GPT2LMHeadModel, ExtendedGenerationMixin):
+    pass
+class ExtendedCTRLLMHeadModel(CTRLLMHeadModel, ExtendedGenerationMixin):
+    pass
+class ExtendedOpenAIGPTLMHeadModel(OpenAIGPTLMHeadModel, ExtendedGenerationMixin):
+    pass
+class ExtendedXLNetLMHeadModel(XLNetLMHeadModel, ExtendedGenerationMixin):
+    pass
+class ExtendedTransfoXLLMHeadModel(TransfoXLLMHeadModel, ExtendedGenerationMixin):
+    pass
+class ExtendedXLMWithLMHeadModel(XLMWithLMHeadModel, ExtendedGenerationMixin):
+    pass
+
+MODEL_CLASSES = {
+    "gpt2": (ExtendedGPT2LMHeadModel, GPT2Tokenizer),
+    "ctrl": (ExtendedCTRLLMHeadModel, CTRLTokenizer),
+    "openai-gpt": (ExtendedOpenAIGPTLMHeadModel, OpenAIGPTTokenizer),
+    "xlnet": (ExtendedXLNetLMHeadModel, XLNetTokenizer),
+    "transfo-xl": (ExtendedTransfoXLLMHeadModel, TransfoXLTokenizer),
+    "xlm": (ExtendedXLMWithLMHeadModel, XLMTokenizer),
+}

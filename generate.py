@@ -1,7 +1,7 @@
 # coding=utf-8
 # Copyright (c) 2021 Jeffrey M. Binder.  All rights reserved.
 
-from run_generation import *
+from generation_utils import *
 
 model_type = 'gpt2'
 model_name_or_path = 'gpt2-xl'
@@ -28,6 +28,15 @@ tokenizer = tokenizer_class.from_pretrained(model_name_or_path)
 model = model_class.from_pretrained(model_name_or_path)
 model.to(device)
 model.eval()
+
+def adjust_length_to_model(length, max_sequence_length):
+    if length < 0 and max_sequence_length > 0:
+        length = max_sequence_length
+    elif 0 < max_sequence_length < length:
+        length = max_sequence_length  # No generation bigger than model size
+    elif length < 0:
+        length = MAX_LENGTH  # avoid infinite loop
+    return length
 length = adjust_length_to_model(length, max_sequence_length=model.config.max_position_embeddings)
 
 import time
