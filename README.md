@@ -16,7 +16,7 @@ This repo implements the rudiments of what I am hoping will become a broader set
 
 In essence, this creates hybrid of a text generator and a programming language, making it easy to compose arrays of multiple prompt variants and experiment with new ways of manipulating the numerical outputs of language models. The primary downside is an increase in the use of GPU memory.
 
-Apart from introducing a new syntax, this project suggests a new interpretation Boolean logic. Boolean operators are usually understood in terms of truth values: "A and B" means that A and B are both true. But Boolean logic can also be interpreted in terms of meaning: "big and red" means the category of things that are both big and red. This semantic interpretation, as I hope to show, can be formalized in a way that is actually computable using language models.
+Apart from introducing a new syntax, this project suggests a new interpretation of Boolean logic. Boolean operators are usually understood in terms of truth values: "A and B" means that A and B are both true. But Boolean logic can also be interpreted in terms of meaning: "big and red" means the category of things that are both big and red. This semantic interpretation, as I hope to show, can be formalized in a way that is actually computable using language models.
 
 As an illustration, consider the following prompt, which one might use as a way of generating descriptions of rabbits:
 
