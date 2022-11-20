@@ -32,15 +32,15 @@ import torch.distributed as dist
 from torch import nn
 
 from transformers.file_utils import ModelOutput
-from transformers.generation_logits_process import (
+from transformers.generation.logits_process import (
     LogitsProcessorList,
 )
-from transformers.generation_stopping_criteria import (
+from transformers.generation.stopping_criteria import (
     StoppingCriteriaList,
     validate_stopping_criteria,
 )
 from transformers.utils import logging
-from transformers.generation_utils import *
+from transformers.generation.utils import *
 from program import Program
 
 from transformers import (
@@ -99,6 +99,9 @@ class ExtendedGenerationMixin(GenerationMixin):
         decoder_start_token_id: Optional[int] = None,
         use_cache: Optional[bool] = None,
         prefix_allowed_tokens_fn: Optional[Callable[[int, torch.Tensor], List[int]]] = None,
+        logits_processor: Optional[LogitsProcessorList] = None,
+        renormalize_logits: Optional[bool] = None,
+        stopping_criteria: Optional[StoppingCriteriaList] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         output_scores: Optional[bool] = None,
@@ -107,6 +110,7 @@ class ExtendedGenerationMixin(GenerationMixin):
         forced_eos_token_id: Optional[int] = None,
         remove_invalid_values: Optional[bool] = None,
         synced_gpus: Optional[bool] = None,
+        exponential_decay_length_penalty: Optional[Tuple[int, float]] = None,
         verbose: Optional[bool] = False,
         **model_kwargs,
     ) -> Union[GreedySearchOutput, SampleOutput, torch.LongTensor]:
@@ -180,6 +184,18 @@ class ExtendedGenerationMixin(GenerationMixin):
                 conditioned on the batch ID :obj:`batch_id` and the previously generated tokens :obj:`inputs_ids`. This
                 argument is useful for constrained generation conditioned on the prefix, as described in
                 `Autoregressive Entity Retrieval <https://arxiv.org/abs/2010.00904>`__.
+            logits_processor (`LogitsProcessorList`, *optional*):
+                 Custom logits processors that complement the default logits processors built from arguments and a
+                 model's config. If a logit processor is passed that is already created with the arguments or a model's
+                 config an error is thrown. This feature is intended for advanced users.
+            renormalize_logits (`bool`, *optional*, defaults to `False`):
+                Whether to renormalize the logits after applying all the logits processors or warpers (including the
+                custom ones). It's highly recommended to set this flag to `True` as the search algorithms suppose the
+                score logits are normalized but some logit processors or warpers break the normalization.
+            stopping_criteria (`StoppingCriteriaList`, *optional*):
+                 Custom stopping criteria that complement the default stopping criteria built from arguments and a
+                 model's config. If a stopping criteria is passed that is already created with the arguments or a
+                 model's config an error is thrown. This feature is intended for advanced users.
             output_attentions (:obj:`bool`, `optional`, defaults to `False`):
                 Whether or not to return the attentions tensors of all attention layers. See ``attentions`` under
                 returned tensors for more details.
@@ -201,6 +217,10 @@ class ExtendedGenerationMixin(GenerationMixin):
                 crash. Note that using ``remove_invalid_values`` can slow down generation.
             synced_gpus (:obj:`bool`, `optional`, defaults to :obj:`False`):
                 Whether to continue running the while loop until max_length (needed for ZeRO stage 3)
+            exponential_decay_length_penalty (`tuple(int, float)`, *optional*, defaults to `model.config.exponential_decay_length_penalty`):
+                This Tuple adds an exponentially increasing length penalty, after a certain amount of tokens have been
+                generated. The tuple shall consist of: `(start_index, decay_factor)` where `start_index` indicates
+                where penalty starts and `decay_factor` represents the factor of exponential decay
             model_kwargs:
                 Additional model specific kwargs will be forwarded to the :obj:`forward` function of the model. If the
                 model is an encoder-decoder model, encoder specific kwargs should not be prefixed and decoder specific
@@ -308,10 +328,14 @@ class ExtendedGenerationMixin(GenerationMixin):
         model_kwargs["use_cache"] = use_cache
 
         # get distribution pre_processing samplers
+        input_ids_seq_length = input_ids.shape[-1]
+        logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
+        stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
         logits_processor = self._get_logits_processor(
             repetition_penalty=repetition_penalty,
             no_repeat_ngram_size=no_repeat_ngram_size,
             encoder_no_repeat_ngram_size=encoder_no_repeat_ngram_size,
+            input_ids_seq_length=input_ids_seq_length,
             encoder_input_ids=encoder_input_ids,
             bad_words_ids=bad_words_ids,
             min_length=min_length,
@@ -324,9 +348,14 @@ class ExtendedGenerationMixin(GenerationMixin):
             num_beam_groups=1,
             diversity_penalty=None,
             remove_invalid_values=remove_invalid_values,
+            exponential_decay_length_penalty=exponential_decay_length_penalty,
+            logits_processor=logits_processor,
+            renormalize_logits=renormalize_logits
         )
 
-        stopping_criteria = self._get_stopping_criteria(max_length=max_length, max_time=max_time)
+        stopping_criteria = self._get_stopping_criteria(
+            max_length=max_length, max_time=max_time, stopping_criteria=stopping_criteria
+        )
 
         if is_greedy_gen_mode:
             if num_return_sequences > 1:
@@ -356,9 +385,9 @@ class ExtendedGenerationMixin(GenerationMixin):
 
             # expand input_ids with `num_return_sequences` additional sequences per batch
             input_ids, model_kwargs = self._expand_inputs_for_generation(
-                input_ids,
                 expand_size=num_return_sequences,
                 is_encoder_decoder=self.config.is_encoder_decoder,
+                input_ids=input_ids,
                 **model_kwargs,
             )
 
