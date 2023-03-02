@@ -11,13 +11,16 @@ import sys
 import torch
 import transformers
 
-from generation_utils import *
+from transformers import AutoTokenizer, AutoModelForCausalLM
+
+from program import Program
+from generator import PromptArrayGenerator
 
 model_type = 'gpt2'
 model_name_or_path = 'gpt2'
 device = 'cuda'
 
-test_mode = 'token'
+test_mode = 'word'
 
 repetition_penalty = None
 suppress_punctuation = True
@@ -33,12 +36,15 @@ overlap_factor = 0.0
 re_phrase_boundary = re.compile('[,.:;?!"“”]')
 
 # Initialize the model and tokenizer
-model_class = MODEL_CLASSES[model_type][0]
-tokenizer_class = MODEL_CLASSES[model_type][1]
-tokenizer = tokenizer_class.from_pretrained(model_name_or_path)
-model = model_class.from_pretrained(model_name_or_path)
+tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+model = AutoModelForCausalLM.from_pretrained(model_name_or_path)
 model.to(device)
 model.eval()
+
+generator = PromptArrayGenerator(
+    model,
+    tokenizer
+)
 
 if model_type == 'xlm':
     re_word = re.compile(r"^ ?[A-Za-z']+(</w>)?$")
@@ -111,23 +117,19 @@ elif model_type in ('openai-gpt', 'gpt2', 'xlnet') and test_mode == 'word':
 else:
     bad_words_ids = punctuation if suppress_punctuation else None
 
-fixed_negative_prompt = model.escape_prompt(fixed_negative_prompt)
+fixed_negative_prompt = Program.escape(fixed_negative_prompt)
 
 def run_model(prompt):
-    output = model.generate(
+    output_sequences = generator(
         prompt=prompt,
         overlap_factor=overlap_factor,
-        tokenizer=tokenizer,
-        pad_token_id=0,
-        max_length=1,
-        repetition_penalty=repetition_penalty,
-        do_sample=False,
         num_return_sequences=1,
+        max_length=1,
+        do_sample=False,
+        repetition_penalty=repetition_penalty,
         bad_words_ids=bad_words_ids,
-        return_dict_in_generate=True,
-        output_scores=True,
+        output_token_ids=True,
     )
-    output_sequences = output.sequences
 
     if test_mode == 'word':
         # Punctuation is not suppressed after the first token, since it provides one of the ways
@@ -136,19 +138,16 @@ def run_model(prompt):
         guess_1 = output_sequences[0, -1]
         tok_1 = tokenizer.decode([guess_1])
         prompt_2 = '{' + prompt + '}' + tok_1
-        output_2 = model.generate(
+        output_sequences_2 = generator(
             prompt=prompt_2,
             overlap_factor=overlap_factor,
-            tokenizer=tokenizer,
-            pad_token_id=0,
-            max_length=5,
-            repetition_penalty=repetition_penalty,
-            do_sample=False,
             num_return_sequences=1,
-            return_dict_in_generate=True,
-            output_scores=True,
+            max_length=5,
+            do_sample=False,
+            repetition_penalty=repetition_penalty,
+            output_token_ids=True,
         )
-        output_sequences = torch.cat([output_sequences, output_2.sequences], dim=1)
+        output_sequences = torch.cat([output_sequences, output_sequences_2], dim=1)
 
     if test_mode == 'token':
         guess = output_sequences[0, -1]
@@ -200,7 +199,7 @@ def interpret_line(line):
         prompt = ids[0,:-i]
         answer = ids[0,-i:]
     prompt = tokenizer.decode(prompt)
-    prompt = model.escape_prompt(prompt)
+    prompt = Program.escape(prompt)
 
     if prompting_mode == 'default':
         pass
@@ -213,45 +212,45 @@ def interpret_line(line):
 
     elif prompting_mode == 'word':
         toks = nltk.word_tokenize(prompt)
-        last_tok = model.escape_prompt(toks[-1])
+        last_tok = Program.escape(toks[-1])
         prompt = f'{prompt}~{prefix}{last_tok}'
 
     elif prompting_mode == 'phrase':
         phrases = re_phrase_boundary.split(prompt)
-        last_phrase = model.escape_prompt(phrases[-1])
+        last_phrase = Program.escape(phrases[-1])
         prompt = f'{prompt}~{prefix}{last_phrase}'
     
     elif prompting_mode == 'sentence':
         first_sentences, last_sentence = split_last_sentence(prompt)
-        last_sentence = model.escape_prompt(last_sentence)
+        last_sentence = Program.escape(last_sentence)
         prompt = f'{prompt}~{prefix}{last_sentence}'
     
     elif prompting_mode == 'sentence|blank':
         first_sentences, last_sentence = split_last_sentence(prompt)
-        last_sentence = model.escape_prompt(last_sentence)
+        last_sentence = Program.escape(last_sentence)
         prompt = f'{prompt}~{prefix}{{{last_sentence}|}}'
 
     elif prompting_mode == 'sentence|word':
         _, last_sentence = split_last_sentence(prompt)
-        last_sentence = model.escape_prompt(last_sentence)
+        last_sentence = Program.escape(last_sentence)
         toks = nltk.word_tokenize(prompt)
-        last_tok = model.escape_prompt(toks[-1])
+        last_tok = Program.escape(toks[-1])
         prompt = f'{prompt}~{prefix}{{{last_sentence}|{last_tok}}}'
 
     elif prompting_mode == 'sentence|phrase':
         _, last_sentence = split_last_sentence(prompt)
-        last_sentence = model.escape_prompt(last_sentence)
+        last_sentence = Program.escape(last_sentence)
         phrases = re_phrase_boundary.split(prompt)
-        last_phrase = model.escape_prompt(phrases[-1])
+        last_phrase = Program.escape(phrases[-1])
         prompt = f'{prompt}~{prefix}{{{last_sentence}|{last_phrase}}}'
 
     elif prompting_mode == 'sentence|word|phrase':
         _, last_sentence = split_last_sentence(prompt)
-        last_sentence = model.escape_prompt(last_sentence)
+        last_sentence = Program.escape(last_sentence)
         toks = nltk.word_tokenize(prompt)
-        last_tok = model.escape_prompt(toks[-1])
+        last_tok = Program.escape(toks[-1])
         phrases = re_phrase_boundary.split(prompt)
-        last_phrase = model.escape_prompt(phrases[-1])
+        last_phrase = Program.escape(phrases[-1])
         prompt = f'{prompt}~{prefix}{{{last_sentence}|{last_tok}|{last_phrase}}}'
 
     else:

@@ -5,7 +5,10 @@ import codecs
 import nltk
 import random
 import scipy.stats
-from generation_utils import *
+import torch
+
+from generator import PromptArrayGenerator
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 model_type = 'gpt2'
 model_name_or_path = 'gpt2-xl'
@@ -32,24 +35,16 @@ f2 = codecs.open(f"discouraging-results/{experiment_name}-v2", "w", "utf8")
 
 # Initialize the model and tokenizer
 torch.manual_seed(seed)
-try:
-    model_class, tokenizer_class = MODEL_CLASSES[model_type]
-except KeyError:
-    raise KeyError("the model {} you specified is not supported. You are welcome to add it and open a PR :)")
-tokenizer = tokenizer_class.from_pretrained(model_name_or_path)
-model = model_class.from_pretrained(model_name_or_path)
+tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+model = AutoModelForCausalLM.from_pretrained(model_name_or_path)
 model.to(device)
 model.eval()
 
-def adjust_length_to_model(length, max_sequence_length):
-    if length < 0 and max_sequence_length > 0:
-        length = max_sequence_length
-    elif 0 < max_sequence_length < length:
-        length = max_sequence_length  # No generation bigger than model size
-    elif length < 0:
-        length = MAX_LENGTH  # avoid infinite loop
-    return length
-length = adjust_length_to_model(length, max_sequence_length=model.config.max_position_embeddings)
+# Initialize PromptArray
+generator = PromptArrayGenerator(
+    model,
+    tokenizer
+)
 
 counts_1 = {word: 0 for word in words_to_count}
 counts_2 = {word: 0 for word in words_to_count}
@@ -57,9 +52,8 @@ for batch_num in range(num_batches):
     print(f"Batch {batch_num}")
     for i, prompt in enumerate([prompt_v1, prompt_v2]):
         # Needed to avoid weirdness with Torch's random number generator
-        output_sequences = model.generate(
+        output_sequences = generator(
             prompt=prompt,
-            tokenizer=tokenizer,
             max_length=length,
             temperature=temperature,
             top_k=top_k,
@@ -67,7 +61,7 @@ for batch_num in range(num_batches):
             repetition_penalty=repetition_penalty,
             do_sample=do_sample,
             num_return_sequences=num_return_sequences,
-            pad_token_id = 0,
+            output_token_ids=True,
             verbose=True,
         )
 

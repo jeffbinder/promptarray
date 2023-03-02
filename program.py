@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (c) 2021 Jeffrey M. Binder.  All rights reserved.
+# Copyright (c) 2021-23 Jeffrey M. Binder.  All rights reserved.
 
 import math
 import time
@@ -84,7 +84,8 @@ class Operation():
         return logits
 
 class Program():
-    def __init__(self, vocab_size: int, overlap_factor: float):
+    def __init__(self, prompt: str, vocab_size: int, overlap_factor: float):
+        self.prompt = prompt
         self.ops = []
         self.config = ProgramConfig(vocab_size, overlap_factor)
         
@@ -212,7 +213,7 @@ class Program():
         ids = torch.tensor(input_ids_padded)
         attention_mask = torch.tensor(input_attention_mask)
 
-        program = Program(vocab_size, overlap_factor)
+        program = Program(prompt, vocab_size, overlap_factor)
         program.ops = ops
 
         return program, ids, attention_mask

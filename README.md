@@ -316,7 +316,7 @@ These are the results for whole-word prediction:
 | gpt2-large | 774M | 50.05 | 56.61 | 66.02 | 67.79 | 70.97 | 70.79 | 70.68 |
 | gpt2-xl | 1558M | 53.87 | 59.13 | 68.60 | 69.90 | 72.39 | 72.87 | 72.54 |
 
-You can replicate these results using the `lambada_score.py` script. Note that the use of the | operator only works when the overlap factor is set to 0.
+You can replicate these results using the `lambada_score.py` script. [Update March 2023: The reported experiments were run with an older version of the package; I have since rewritten the generator code, and scores are slightly different with the new version.] Note that the use of the | operator only works when the overlap factor is set to 0.
 
 It is worth noting that the scores are only improved with the *as opposed to* operator, as implemented using division; the ^ operator based on subtraction does not work in this application.
 
