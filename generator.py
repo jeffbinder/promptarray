@@ -22,7 +22,7 @@ class PromptArrayGenerator:
         bos_token_id: Optional[int] = None,
         pad_token_id: Optional[int] = None,
         eos_token_id: Optional[int] = None,
-        use_cache: Optional[bool] = True
+        use_cache: Optional[bool] = True,
     ):
         self.model = model
         self.vocab_size = self.model.config.vocab_size
@@ -102,10 +102,28 @@ class PromptArrayGenerator:
             prompt_len = input_ids.shape[-1]
             cur_length = 0
 
+            use_kv_cache = (self.use_cache and hasattr(self.model, 'prepare_inputs_for_generation'))
+            if use_kv_cache:
+                past_key_values = transformers.DynamicCache(config=self.model.config)
+                cache_position = torch.ones_like(input_ids[0, :], dtype=torch.int64).cumsum(0) - 1
+            model_state = None
+            
+            first = True
             while cur_length < max_length:
-
-                model_inputs = self.model.prepare_inputs_for_generation(input_ids, **model_kwargs)
+                if use_kv_cache:
+                    model_inputs = self.model.prepare_inputs_for_generation(
+                        input_ids if first else input_ids[:, -1:],
+                        past_key_values=past_key_values,
+                        cache_position=cache_position,
+                        **model_kwargs
+                    )
+                else:
+                    model_inputs = self.model.prepare_inputs_for_generation(input_ids, **model_kwargs)
+                
                 outputs = self.model(**model_inputs, return_dict=True)
+                if use_kv_cache:
+                    past_key_values = outputs.past_key_values
+                    cache_position = cache_position[-1:] + 1
 
                 scores = outputs.logits[:, -1, :]
                 scores = torch.nn.functional.softmax(scores, dim=-1)
@@ -126,17 +144,19 @@ class PromptArrayGenerator:
                     scores = scores.masked_fill(indices_to_remove, -float("Inf"))
 
                 if repetition_penalty is not None:
-                    score = torch.gather(scores, 1, input_ids)
+                    last_token_ids = input_ids[:, -1:] if past_key_values is not None else input_ids
+                    score = torch.gather(scores, 1, last_token_ids)
                     score = torch.where(score < 0, score * repetition_penalty, score / repetition_penalty)
-                    scores.scatter_(1, input_ids, score)
+                    scores.scatter_(1, last_token_ids, score)
 
                 if bad_words_ids:
                     bad_words_mask = single_token_bad_words_mask.clone()
                     for banned_token_seq in multitoken_bad_words:
                         prev_tokens = banned_token_seq[:-1]
                         prev_tokens_length = len(prev_tokens)
-                        if len(input_ids) >= prev_tokens_length and input_ids[-prev_tokens_length:] == banned_token_seq[:-1]:
-                            bad_words_mask[banned_token_seq[-1]] = 1
+                        check_tokens = input_ids[:, -prev_tokens_length:] if input_ids.shape[1] >= prev_tokens_length else input_ids
+                        if check_tokens.shape[1] == prev_tokens_length and torch.equal(check_tokens, torch.tensor(prev_tokens, device=input_ids.device).unsqueeze(0)):
+                            bad_words_mask[0, banned_token_seq[-1]] = 1
                     scores = scores.masked_fill(bad_words_mask, -float("Inf"))
 
                 if do_sample:
@@ -159,6 +179,8 @@ class PromptArrayGenerator:
                 unfinished_sequences = unfinished_sequences.mul((next_tokens != self.eos_token_id).long())
                 if unfinished_sequences.max() == 0:
                     break
+
+                first = False
 
             output_ids = input_ids[0:num_return_sequences, prompt_len:]
             if len(output_ids.shape) > 2:
