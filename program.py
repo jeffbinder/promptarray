@@ -3,11 +3,32 @@
 
 import math
 import time
+import transformers
 import torch
 from torch.nn import functional as F
 
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 from lark import Lark
+
+
+class ChannelFinalStoppingCriteria(transformers.StoppingCriteria):
+    """
+    Stopping criteria that stops generation after the sequence "<|channel|>final<|message|>".
+    """
+    def __init__(self, tokenizer):
+        self.tokenizer = tokenizer
+        self.stop_sequence = "<|channel|>final<|message|>"
+        # Pre-tokenize the stop sequence for efficiency
+        self.stop_tokens = tokenizer.encode(self.stop_sequence, add_special_tokens=False)
+    
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+        # Check if any sequence contains the stop sequence
+        for i in range(input_ids.shape[0]):
+            sequence = input_ids[i]
+            sequence_text = self.tokenizer.decode(sequence, skip_special_tokens=False)
+            if self.stop_sequence in sequence_text:
+                return True
+        return False
 
 parser = Lark(r'''
 start: _exp1
@@ -122,7 +143,10 @@ class Program():
         vocab_size: int,
         overlap_factor: float,
         chat_mode: bool,
-        verbose: bool
+        chat_mode_separate_analysis: bool,
+        chat_mode_max_analysis_length: int,
+        verbose: bool,
+        analysis_model: Optional[Any] = None
     ):
         """
         Parses a Boolean prompt and transforms it into a form suitable for use with the model. Returns three things: 1) a Program object that can be called to execute the operations included in the prompt, 2) a tensor comprising all possible prompt variants, suitable for use as input to the model; and 3) an attention mask that must be used when the model is run, so as to account for prompt variants of different lengths.
@@ -195,10 +219,10 @@ class Program():
         max_len = 0
         for s in strings:
             if chat_mode:
-                s = tokenizer.apply_chat_template(
-                    [{"role": "user", "content": s}],
-                    tokenize=False,
-                    add_generation_prompt=True
+                s = cls.chat_mode_preprocess(
+                    s, tokenizer, analysis_model,
+                    chat_mode_separate_analysis,
+                    chat_mode_max_analysis_length
                 )
             toks = tokenizer.tokenize(s)
             ids = tokenizer.convert_tokens_to_ids(toks)
@@ -224,6 +248,41 @@ class Program():
         program.ops = ops
 
         return program, ids, attention_mask
+
+    @classmethod
+    def chat_mode_preprocess(
+        cls,
+        prompt: str,
+        tokenizer: Any,
+        analysis_model: Any,
+        separate_analysis: bool = False,
+        max_analysis_length: int = 200,
+    ):
+        if separate_analysis:
+            inputs = tokenizer.apply_chat_template(
+                [{"role": "user", "content": prompt}],
+                add_generation_prompt=True,
+                return_tensors="pt",
+                return_dict=True
+            ).to(analysis_model.device)
+            outputs = analysis_model.generate(
+                **inputs,
+                max_new_tokens=max_analysis_length,
+                stopping_criteria=transformers.StoppingCriteriaList([
+                    ChannelFinalStoppingCriteria(tokenizer)
+                ])
+            )
+            text = tokenizer.decode(outputs[0])
+            print("-- Generated analysis:")
+            print(text)
+            return text
+        else:
+            text = tokenizer.apply_chat_template(
+                [{"role": "user", "content": prompt}],
+                tokenize=False,
+                add_generation_prompt=True
+            )
+            return text
 
     @classmethod
     def escape(self, prompt: str):

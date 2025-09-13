@@ -38,6 +38,8 @@ class PromptArrayGenerator:
         self,
         prompt: str,
         chat_mode: bool = False,
+        chat_mode_separate_analysis: bool = False,
+        chat_mode_max_analysis_length: int = 200,
         num_return_sequences: int = 1,
         max_length: int = None,
         do_sample: bool = False,
@@ -72,7 +74,10 @@ class PromptArrayGenerator:
                 self.vocab_size,
                 overlap_factor,
                 chat_mode,
-                verbose
+                chat_mode_separate_analysis,
+                chat_mode_max_analysis_length,
+                verbose,
+                analysis_model=self.model
             )
             
             input_ids = input_ids.repeat_interleave(num_return_sequences, dim=0)
