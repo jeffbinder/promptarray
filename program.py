@@ -196,7 +196,7 @@ class Program():
         for s in strings:
             if chat_mode:
                 s = tokenizer.apply_chat_template(
-                    [{"role": "user", "content": prompt}],
+                    [{"role": "user", "content": s}],
                     tokenize=False,
                     add_generation_prompt=True
                 )
