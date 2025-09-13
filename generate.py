@@ -4,9 +4,8 @@
 from generator import PromptArrayGenerator
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
-model_type = 'gpt2'
-model_name_or_path = 'gpt2-xl'
-device = 'cuda'
+model_name_or_path = 'openai/gpt-oss-20b'
+device = 'mps'
 
 length = 100
 do_sample = True
@@ -14,11 +13,12 @@ temperature = 0.6
 k = 5
 p = 0.5
 repetition_penalty = 1.5
-bad_words = ["the"]
+bad_words = None
 num_return_sequences = 2
 overlap_factor = 0.25
+chat_mode = True
 
-prompt_text = '''Scientists recently discovered a new species of {serpent~snake}. Here is a description of it:'''
+prompt_text = '''Write an imaginary description of a new species of {serpent~snake}.'''
 
 
 # Initialize the model and tokenizer
@@ -37,6 +37,7 @@ import time
 start_time = time.time()
 outputs = generator(
     prompt=prompt_text,
+    chat_mode=chat_mode,
     num_return_sequences=num_return_sequences,
     max_length=length,
     do_sample=do_sample,

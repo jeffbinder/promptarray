@@ -37,6 +37,7 @@ class PromptArrayGenerator:
     def __call__(
         self,
         prompt: str,
+        chat_mode: bool = False,
         num_return_sequences: int = 1,
         max_length: int = None,
         do_sample: bool = False,
@@ -70,6 +71,7 @@ class PromptArrayGenerator:
                 self.pad_token_id,
                 self.vocab_size,
                 overlap_factor,
+                chat_mode,
                 verbose
             )
             

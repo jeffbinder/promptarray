@@ -121,6 +121,7 @@ class Program():
         pad_token_id: int,
         vocab_size: int,
         overlap_factor: float,
+        chat_mode: bool,
         verbose: bool
     ):
         """
@@ -193,6 +194,12 @@ class Program():
         input_ids = []
         max_len = 0
         for s in strings:
+            if chat_mode:
+                s = tokenizer.apply_chat_template(
+                    [{"role": "user", "content": prompt}],
+                    tokenize=False,
+                    add_generation_prompt=True
+                )
             toks = tokenizer.tokenize(s)
             ids = tokenizer.convert_tokens_to_ids(toks)
             if bos_token_id is not None:
