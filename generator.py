@@ -102,15 +102,13 @@ class PromptArrayGenerator:
             prompt_len = input_ids.shape[-1]
             cur_length = 0
 
-            use_kv_cache = (self.use_cache and hasattr(self.model, 'prepare_inputs_for_generation'))
-            if use_kv_cache:
+            if self.use_cache:
                 past_key_values = transformers.DynamicCache(config=self.model.config)
                 cache_position = torch.ones_like(input_ids[0, :], dtype=torch.int64).cumsum(0) - 1
-            model_state = None
             
             first = True
             while cur_length < max_length:
-                if use_kv_cache:
+                if self.use_cache:
                     model_inputs = self.model.prepare_inputs_for_generation(
                         input_ids if first else input_ids[:, -1:],
                         past_key_values=past_key_values,
@@ -121,7 +119,7 @@ class PromptArrayGenerator:
                     model_inputs = self.model.prepare_inputs_for_generation(input_ids, **model_kwargs)
                 
                 outputs = self.model(**model_inputs, return_dict=True)
-                if use_kv_cache:
+                if self.use_cache:
                     past_key_values = outputs.past_key_values
                     cache_position = cache_position[-1:] + 1
 
