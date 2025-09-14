@@ -147,7 +147,7 @@ However, this approach runs into conceptual problems because, in a standard text
 
 A better approach would be to apply the operators not to the prompts themselves, but rather to their (logical) meanings. While we cannot directly compute the effects of meaning on the text generator, we can come up with a formal system that approximates this effect. Suppose that exp is a Boolean prompt expression and and exp ⊃ A expresses "exp means A." We assume that prompts can have multiple meanings. We can interpret the *and* and *or* operators through the following rules:
 
-> exp ⊃ A and B ⇒ exp ⊃ A and exp ⊃ B
+> exp ⊃ A and B ⇒ exp ⊃ A and exp ⊃ B  
 > exp ⊃ A or B ⇒ exp ⊃ A or exp ⊃ B
 
 We can then use the following rules for generating text:
