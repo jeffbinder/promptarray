@@ -38,8 +38,8 @@ class PromptArrayGenerator:
         self,
         prompt: str,
         chat_mode: bool = False,
-        chat_mode_separate_analysis: bool = False,
-        chat_mode_max_analysis_length: int = 200,
+        chat_mode_think_first: bool = False,
+        chat_mode_max_thought_length: int = 2000,
         num_return_sequences: int = 1,
         max_length: int = None,
         do_sample: bool = False,
@@ -74,8 +74,8 @@ class PromptArrayGenerator:
                 self.vocab_size,
                 overlap_factor,
                 chat_mode,
-                chat_mode_separate_analysis,
-                chat_mode_max_analysis_length,
+                chat_mode_think_first,
+                chat_mode_max_thought_length,
                 verbose,
                 analysis_model=self.model
             )
@@ -144,10 +144,9 @@ class PromptArrayGenerator:
                     scores = scores.masked_fill(indices_to_remove, -float("Inf"))
 
                 if repetition_penalty is not None:
-                    last_token_ids = input_ids[:, -1:] if past_key_values is not None else input_ids
-                    score = torch.gather(scores, 1, last_token_ids)
+                    score = torch.gather(scores, 1, input_ids)
                     score = torch.where(score < 0, score * repetition_penalty, score / repetition_penalty)
-                    scores.scatter_(1, last_token_ids, score)
+                    scores.scatter_(1, input_ids, score)
 
                 if bad_words_ids:
                     bad_words_mask = single_token_bad_words_mask.clone()
@@ -190,7 +189,10 @@ class PromptArrayGenerator:
                 return output_ids
             else:
                 text_outputs = [
-                    self.tokenizer.decode(generated_sequence, clean_up_tokenization_spaces=True)
+                    (
+                        self.tokenizer.decode(generated_sequence, clean_up_tokenization_spaces=True)
+                        .replace('<|endoftext|>', '')
+                    )
                     for generated_sequence in output_ids
                 ]
                 return text_outputs

@@ -143,8 +143,8 @@ class Program():
         vocab_size: int,
         overlap_factor: float,
         chat_mode: bool,
-        chat_mode_separate_analysis: bool,
-        chat_mode_max_analysis_length: int,
+        chat_mode_think_first: bool,
+        chat_mode_max_thought_length: int,
         verbose: bool,
         analysis_model: Optional[Any] = None
     ):
@@ -221,8 +221,9 @@ class Program():
             if chat_mode:
                 s = cls.chat_mode_preprocess(
                     s, tokenizer, analysis_model,
-                    chat_mode_separate_analysis,
-                    chat_mode_max_analysis_length
+                    chat_mode_think_first,
+                    chat_mode_max_thought_length,
+                    verbose
                 )
             toks = tokenizer.tokenize(s)
             ids = tokenizer.convert_tokens_to_ids(toks)
@@ -257,6 +258,7 @@ class Program():
         analysis_model: Any,
         separate_analysis: bool = False,
         max_analysis_length: int = 200,
+        verbose: bool = False,
     ):
         if separate_analysis:
             inputs = tokenizer.apply_chat_template(
@@ -273,8 +275,9 @@ class Program():
                 ])
             )
             text = tokenizer.decode(outputs[0])
-            print("-- Generated analysis:")
-            print(text)
+            if verbose:
+                print("-- Generated analysis:")
+                print(text)
             return text
         else:
             text = tokenizer.apply_chat_template(

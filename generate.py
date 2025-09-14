@@ -5,18 +5,20 @@ from generator import PromptArrayGenerator
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 model_name_or_path = 'openai/gpt-oss-20b'
-device = 'mps'
+device = 'cuda'
 
-length = 100
+length = 2000
 do_sample = True
-temperature = 0.6
-k = 5
-p = 0.5
-repetition_penalty = 1.5
+temperature = 0.3
+k = 10
+p = 1.0
+repetition_penalty = 2.0
 bad_words = None
 num_return_sequences = 2
 overlap_factor = 0.25
 chat_mode = True
+chat_mode_think_first = True
+chat_mode_max_thought_length = 2000
 
 prompt_text = '''Write an imaginary description of a new species of {serpent~snake}.'''
 
@@ -38,6 +40,8 @@ start_time = time.time()
 outputs = generator(
     prompt=prompt_text,
     chat_mode=chat_mode,
+    chat_mode_think_first=chat_mode_think_first,
+    chat_mode_max_thought_length=chat_mode_max_thought_length,
     num_return_sequences=num_return_sequences,
     max_length=length,
     do_sample=do_sample,
