@@ -129,7 +129,7 @@ Note that the text to which the *as opposed to* operator applies—the word "The
 
 This means that the values for prompts 0 and one are combined with the | operation and the result stored at position 0; the same is then done for 2 and 3, and so forth. In the end, the final result always ends up at position 0.
 
-A downside of this method is the potential for combinatorial explosion—an exponential increase in the number of variants as the complexity of the prompt increases. This issue arises in cases where there are options in multiple parts of a single stretch of text, as in "{A|B}{C|D}{E|F}{G|H}{I|J}" (32 variants). If the operators are organized in a strictly nested structure, then the number of variants is simply equal to the number of nodes in the tree. Thus, the seemingly more complex expression "{{{A&B}|{C&{D~E}}}&{F|{{G&H}~{I^J}}}}" only produces 10 variants. Users will need to consider this when designing prompts.
+A downside of this method is the potential for combinatorial explosion—an exponential increase in the number of variants as the complexity of the prompt increases. This issue arises in cases where there are options in multiple parts of a single stretch of text, as in "{A|B}{C|D}{E|F}{G|H}{I|J}" (32 variants). If the operators are organized in a strictly nested structure, then the number of variants is simply equal to the number of nodes in the tree. Thus, the seemingly more complex expression "{{{A&B}|{C&{D\~E}}}&{F|{{G&H}\~{I^J}}}}" only produces 10 variants. Users will need to consider this when designing prompts.
 
 All of the variants are fed into the model in one batch, so a prompt that involves more variants will not take much more time to run than a simple one, at least on a GPU. However, expressions will use up more GPU memory the more variants they involve.
 
@@ -145,17 +145,19 @@ In all cases, we need to implement the rules for how *and* and *or* behave when 
 
 However, this approach runs into conceptual problems because, in a standard text generation model, there can only be one prompt at a time. It therefore does not make sense to say that the prompt is both A and B, and employing this condition leads to inconsistent probabilities. As a result, this approach works for *or*, but it does not provide a sound way of defining *and*.
 
-A better approach would be to apply the operators not to the prompts themselves, but rather to their (logical) meanings. While we cannot directly compute the effects of meaning on the text generator, we can come up with a formal system that approximates this effect. Suppose that exp is a Boolean prompt expression and and exp ⊃ A expresses "exp means A." We assume that prompts can have multiple meanings. We can interpret the *and* and *or* operators through the following rules:
+A better approach would be to apply the operators not to the prompts themselves, but rather to their (logical) meanings. While we cannot directly compute the effects of meaning on the text generator, we can come up with a formal system that approximates this effect. Suppose that exp is a Boolean prompt expression and and exp ⊃ A indicates that the expression's continuation should reflect the meaning of A.* We can interpret the *and* and *or* operators through the following rules:
 
-> exp ⊃ A and B ⇒ exp ⊃ A and exp ⊃ B
+> exp ⊃ A and B ⇒ exp ⊃ A and exp ⊃ B  
 > exp ⊃ A or B ⇒ exp ⊃ A or exp ⊃ B
+
+*I am here thinking along the lines of Boole's categorical interpretation of logic, in which "and" and "or" apply not to propositions, but rather to categorematic terms (nouns or adjectives). In these terms, if we say that expression x means "red and smooth object," then its referent is red and its referent is smooth. Again, if we say that x means "red or blue object," then its referent is red or its referent is blue. In regard to text generation, we can transfer this thinking from the referent to the continuation: if a prompt contains the expression "A and B," then its continuation should reflect the meaning of A and the meaning of B; likewise, if a prompt contains "A or B," then its continuation should reflect the meaning of one or the other.
 
 We can then use the following rules for generating text:
 
 > If A contains no operators, then Pr(gen = x | exp ⊃ A) = Pr(gen = x | prompt = A)  
 > Pr(gen = x | exp ⊃ A and exp ⊃ B) = Pr(gen1 = x | gen1 = gen2, exp1 ⊃ A, exp2 ⊃ B)
 
-Note that the last formula involves two separate generative processes, one for each prompt. We assume that these processes operate independently. Based on these definitions, we can derive the following:
+Note that the last formula involves two separate generative processes, one for each prompt. We assume that these processes operate independently, with exp1 producing the continuation gen1 and exp2 producing the continuation gen2. Based on these definitions, we can derive the following:
 
 > Pr(gen = x | exp ⊃ A and exp ⊃ B) = Pr(gen = x | exp ⊃ A) Pr(gen = x | exp ⊃ B) / Pr(gen1 = gen2 | exp1 ⊃ A and exp2 ⊃ B)  
 > Pr(gen = x | exp ⊃ A or exp ⊃ B) = (Pr(gen = x | exp ⊃ A) Pr(exp ⊃ A) + Pr(gen = x | exp ⊃ B) Pr(exp ⊃ B) - Pr(gen = x | exp ⊃ A and exp ⊃ B) Pr(exp ⊃ A and exp ⊃ B)) / (Pr(exp ⊃ A) + Pr(exp ⊃ B) - Pr(exp ⊃ A and exp ⊃ B))

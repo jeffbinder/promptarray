@@ -22,7 +22,7 @@ class PromptArrayGenerator:
         bos_token_id: Optional[int] = None,
         pad_token_id: Optional[int] = None,
         eos_token_id: Optional[int] = None,
-        use_cache: Optional[bool] = True
+        use_cache: Optional[bool] = True,
     ):
         self.model = model
         self.vocab_size = self.model.config.vocab_size
@@ -37,6 +37,9 @@ class PromptArrayGenerator:
     def __call__(
         self,
         prompt: str,
+        chat_mode: bool = False,
+        chat_mode_think_first: bool = False,
+        chat_mode_max_thought_length: int = 2000,
         num_return_sequences: int = 1,
         max_length: int = None,
         do_sample: bool = False,
@@ -70,7 +73,11 @@ class PromptArrayGenerator:
                 self.pad_token_id,
                 self.vocab_size,
                 overlap_factor,
-                verbose
+                chat_mode,
+                chat_mode_think_first,
+                chat_mode_max_thought_length,
+                verbose,
+                analysis_model=self.model
             )
             
             input_ids = input_ids.repeat_interleave(num_return_sequences, dim=0)
@@ -95,10 +102,26 @@ class PromptArrayGenerator:
             prompt_len = input_ids.shape[-1]
             cur_length = 0
 
+            if self.use_cache:
+                past_key_values = transformers.DynamicCache(config=self.model.config)
+                cache_position = torch.ones_like(input_ids[0, :], dtype=torch.int64).cumsum(0) - 1
+            
+            first = True
             while cur_length < max_length:
-
-                model_inputs = self.model.prepare_inputs_for_generation(input_ids, **model_kwargs)
+                if self.use_cache:
+                    model_inputs = self.model.prepare_inputs_for_generation(
+                        input_ids if first else input_ids[:, -1:],
+                        past_key_values=past_key_values,
+                        cache_position=cache_position,
+                        **model_kwargs
+                    )
+                else:
+                    model_inputs = self.model.prepare_inputs_for_generation(input_ids, **model_kwargs)
+                
                 outputs = self.model(**model_inputs, return_dict=True)
+                if self.use_cache:
+                    past_key_values = outputs.past_key_values
+                    cache_position = cache_position[-1:] + 1
 
                 scores = outputs.logits[:, -1, :]
                 scores = torch.nn.functional.softmax(scores, dim=-1)
@@ -128,8 +151,9 @@ class PromptArrayGenerator:
                     for banned_token_seq in multitoken_bad_words:
                         prev_tokens = banned_token_seq[:-1]
                         prev_tokens_length = len(prev_tokens)
-                        if len(input_ids) >= prev_tokens_length and input_ids[-prev_tokens_length:] == banned_token_seq[:-1]:
-                            bad_words_mask[banned_token_seq[-1]] = 1
+                        check_tokens = input_ids[:, -prev_tokens_length:] if input_ids.shape[1] >= prev_tokens_length else input_ids
+                        if check_tokens.shape[1] == prev_tokens_length and torch.equal(check_tokens, torch.tensor(prev_tokens, device=input_ids.device).unsqueeze(0)):
+                            bad_words_mask[0, banned_token_seq[-1]] = 1
                     scores = scores.masked_fill(bad_words_mask, -float("Inf"))
 
                 if do_sample:
@@ -153,6 +177,8 @@ class PromptArrayGenerator:
                 if unfinished_sequences.max() == 0:
                     break
 
+                first = False
+
             output_ids = input_ids[0:num_return_sequences, prompt_len:]
             if len(output_ids.shape) > 2:
                 output_ids.squeeze_()
@@ -161,7 +187,10 @@ class PromptArrayGenerator:
                 return output_ids
             else:
                 text_outputs = [
-                    self.tokenizer.decode(generated_sequence, clean_up_tokenization_spaces=True)
+                    (
+                        self.tokenizer.decode(generated_sequence, clean_up_tokenization_spaces=True)
+                        .replace('<|endoftext|>', '')
+                    )
                     for generated_sequence in output_ids
                 ]
                 return text_outputs
